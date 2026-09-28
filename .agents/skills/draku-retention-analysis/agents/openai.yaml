@@ -1,0 +1,4 @@
+interface:
+  display_name: "Draku Retention Analysis"
+  short_description: "Compare subscriber churn and renewal outcomes"
+  default_prompt: "Use $draku-retention-analysis to assess whether a Draku change increased subscriber churn, separating early warnings from mature renewal outcomes."

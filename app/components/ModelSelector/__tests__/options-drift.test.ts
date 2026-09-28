@@ -1,0 +1,103 @@
+import { describe, it, expect } from "@jest/globals";
+import { ASK_MODEL_OPTIONS, AGENT_MODEL_OPTIONS } from "../constants";
+import { myProvider, resolveTierToProviderKey } from "@/lib/ai/providers";
+import type { ChatMode } from "@/types/chat";
+
+/**
+ * Drift guard: every selectable Draku tier must resolve to a provider key
+ * registered with `myProvider` in *both* modes. Without this, picking the
+ * tier from the UI would crash on `myProvider.languageModel()`.
+ */
+describe("ModelSelector tier ↔ provider drift", () => {
+  const allOptions = [...ASK_MODEL_OPTIONS, ...AGENT_MODEL_OPTIONS];
+
+  it("every option in both lineups resolves to a registered provider", () => {
+    for (const mode of ["ask", "agent"] as ChatMode[]) {
+      const options =
+        mode === "agent" ? AGENT_MODEL_OPTIONS : ASK_MODEL_OPTIONS;
+      for (const option of options) {
+        const providerKey = resolveTierToProviderKey(option.id, mode);
+        expect(providerKey).not.toBeNull();
+        expect(() =>
+          myProvider.languageModel(providerKey as string),
+        ).not.toThrow();
+      }
+    }
+  });
+
+  it("ask + agent lineups expose the same tier ids", () => {
+    const askIds = new Set(ASK_MODEL_OPTIONS.map((o) => o.id));
+    const agentIds = new Set(AGENT_MODEL_OPTIONS.map((o) => o.id));
+    expect([...askIds].sort()).toEqual([...agentIds].sort());
+  });
+
+  it("Draku Standard resolves to GLM 5.3 Flash in both modes", () => {
+    expect(resolveTierToProviderKey("draku-standard", "ask")).toBe(
+      "model-glm-5.3-flash",
+    );
+    expect(resolveTierToProviderKey("draku-standard", "agent")).toBe(
+      "model-glm-5.3-flash-agent",
+    );
+  });
+
+  it("Draku Pro keeps Ask on V4 Pro 0813 and uses V4.1 Flash in Agent", () => {
+    expect(resolveTierToProviderKey("draku-pro", "ask")).toBe(
+      "model-deepseek-v4-pro-0813",
+    );
+    expect(resolveTierToProviderKey("draku-pro", "agent")).toBe(
+      "model-deepseek-v4-flash-vision-pro",
+    );
+  });
+
+  it("Draku Max resolves to the same provider in both modes", () => {
+    expect(resolveTierToProviderKey("draku-max", "ask")).toBe(
+      "model-glm-5.3",
+    );
+    expect(resolveTierToProviderKey("draku-max", "agent")).toBe(
+      "model-glm-5.3",
+    );
+  });
+
+  it("'auto' returns null (caller routes to the auto router)", () => {
+    expect(resolveTierToProviderKey("auto", "ask")).toBeNull();
+    expect(resolveTierToProviderKey("auto", "agent")).toBeNull();
+  });
+
+  it("hover-popup descriptions are present for every Draku tier", () => {
+    const tiered = allOptions.filter((o) => o.label.startsWith("Draku"));
+    expect(tiered.length).toBeGreaterThan(0);
+    for (const option of tiered) {
+      expect(option.description).toBeTruthy();
+      expect(option.poweredBy).toBeTruthy();
+    }
+  });
+
+  it("discloses GLM 5.3 Flash for Agent Standard", () => {
+    expect(
+      AGENT_MODEL_OPTIONS.find((option) => option.id === "draku-standard")
+        ?.poweredBy,
+    ).toBe("Z.ai GLM 5.3 Flash");
+  });
+
+  it("discloses each mode's provider for Draku Pro", () => {
+    expect(
+      ASK_MODEL_OPTIONS.find((option) => option.id === "draku-pro")
+        ?.poweredBy,
+    ).toBe("DeepSeek V4 Pro 0813");
+    expect(
+      AGENT_MODEL_OPTIONS.find((option) => option.id === "draku-pro")
+        ?.poweredBy,
+    ).toBe("DeepSeek V4.1 Flash");
+  });
+
+  it("discloses GLM 5.3 for Draku Max", () => {
+    expect(
+      ASK_MODEL_OPTIONS.find((option) => option.id === "draku-max")
+        ?.poweredBy,
+    ).toBe("Z.ai GLM 5.3");
+    expect(
+      AGENT_MODEL_OPTIONS.find((option) => option.id === "draku-max")
+        ?.poweredBy,
+    ).toBe("Z.ai GLM 5.3");
+  });
+});

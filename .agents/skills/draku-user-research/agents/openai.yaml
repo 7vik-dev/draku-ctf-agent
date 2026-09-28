@@ -1,0 +1,4 @@
+interface:
+  display_name: "Draku User Research"
+  short_description: "Analyze user workflows from private product evidence"
+  default_prompt: "Use $draku-user-research to answer this Linear research question from privacy-safe product evidence."
