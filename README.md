@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://draku.dev/">
-    <img src="public/icon-512x512.png" width="150" alt="Draku Logo">
+    
   </a>
 </p>
 
